@@ -1,9 +1,10 @@
 import 'package:fimber/fimber.dart';
+import 'package:fleak_detector/leak/leak_analyzer.dart';
 import 'package:flutter/widgets.dart';
 
-import 'leak_task.dart';
+import 'detect_task.dart';
 
-const defaultCheckDelay = 5;
+const defaultCheckDelay = 500;
 typedef ShouldAddedRoute = bool Function(Route rout);
 
 class LeakObserver extends NavigatorObserver {
@@ -45,31 +46,22 @@ class LeakObserver extends NavigatorObserver {
   Map<String, Expando> _stateMap = {};
 
   void _add(Route route) {
-    Element? element = _getElementByRoute(route);
-    if (element != null) {
-      route.didPush().then((value) {
-        Fimber.d('加入檢測: ${_getRouteKey(route)}');
-        Expando expando = Expando('${element.widget}');
-        expando[element.widget] = true;
-        _widgetMap[_getRouteKey(route)] = expando;
-
-        if (element is StatefulElement) {
-          Expando expandoState = Expando('${element.state}');
-          expando[element.state] = true;
-          _stateMap[_getRouteKey(route)] = expandoState;
-        }
-      });
-    }
+    route.didPush().then((_) {
+      final element = _getElementByRoute(route);
+      if (element != null) {
+        LeakAnalyzer().addWatchObject(route, _getRouteKey(route));
+      }
+    });
   }
 
   void _remove(Route route) {
-    Element? element = _getElementByRoute(route);
-    Expando? expando = _widgetMap.remove(_getRouteKey(route));
-    if (element != null && expando != null) {
-      Future.delayed(Duration(seconds: checkLeakDelay), () {
-        LeakTask(expando).start(tag: 'Widget leaks');
-      });
-    }
+    route.didPush().then((_) {
+      final element = _getElementByRoute(route);
+      if (element != null) {
+        LeakAnalyzer()
+            .ensureReleaseAsync(_getRouteKey(route), delay: checkLeakDelay);
+      }
+    });
   }
 
   ///Get the ‘Element’ of our custom page
