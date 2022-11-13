@@ -2,7 +2,7 @@ class CodeInfo {
   int? line;
   int? column;
   String? codeLine;
-  String? uri; //lib uri
+  String? uri;
 
   CodeInfo(this.line, this.column, this.codeLine, this.uri);
 

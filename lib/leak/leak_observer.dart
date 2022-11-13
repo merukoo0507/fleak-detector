@@ -1,5 +1,5 @@
 import 'package:fimber/fimber.dart';
-import 'package:fleak_detector/leak/leak_analyzer.dart';
+import 'package:fleak_detector/leak/leak_detector.dart';
 import 'package:flutter/widgets.dart';
 
 import 'detect_task.dart';
@@ -49,25 +49,23 @@ class LeakObserver extends NavigatorObserver {
     route.didPush().then((_) {
       final element = _getElementByRoute(route);
       if (element != null) {
-        LeakAnalyzer().addWatchObject(route, _getRouteKey(route));
+        LeakDetector().addWatchObject(route, _getRouteKey(route));
       }
     });
   }
 
   void _remove(Route route) {
-    route.didPush().then((_) {
-      final element = _getElementByRoute(route);
-      if (element != null) {
-        LeakAnalyzer()
-            .ensureReleaseAsync(_getRouteKey(route), delay: checkLeakDelay);
-      }
-    });
+    final element = _getElementByRoute(route);
+    if (element != null) {
+      LeakDetector()
+          .ensureReleaseAsync(_getRouteKey(route), delay: checkLeakDelay);
+    }
   }
 
   ///Get the ‘Element’ of our custom page
   Element? _getElementByRoute(Route route) {
     Element? element;
-    if (route is ModalRoute && (shouldCheck == null || shouldCheck!(route))) {
+    if (route is PageRoute && (shouldCheck == null || shouldCheck!(route))) {
       //RepaintBoundary
       route.subtreeContext?.visitChildElements((child) {
         //Builder

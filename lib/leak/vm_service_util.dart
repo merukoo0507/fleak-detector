@@ -1,13 +1,13 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:fimber/fimber.dart';
 import 'package:vm_service/utils.dart';
 import 'package:vm_service/vm_service.dart';
 import 'package:vm_service/vm_service_io.dart';
 
-const String _findLibrary = 'package:leak_detector/src/vm_service_utils.dart';
+const String _findLibrary = 'package:fleak_detector/leak/vm_service_util.dart';
 
 class VmServiceUtils {
   static VmServiceUtils? _instance;
@@ -54,6 +54,8 @@ class VmServiceUtils {
 
   Future<Isolate?> getIsolate() async {
     IsolateRef? ref;
+    VM? vm = await getVM();
+    if (vm == null) return null;
     if (_isolate == null) {
       _vm?.isolates?.forEach((isolate) {
         if (isolate.name == 'main') {
@@ -130,13 +132,13 @@ class VmServiceUtils {
     if (library == null ||
         library.id == null ||
         vms == null ||
-        isolate != null ||
-        isolate?.id != null) return null;
+        isolate == null ||
+        isolate.id == null) return null;
 
     // 使用反射
     // 讓vm產生key, 將key返回後, 我們在全域變數中將_objCache[key]設為我們要觀察的物件,
     Response keyResponse =
-        await vms.invoke(isolate!.id!, library.id!, 'generateNewKey', []);
+        await vms.invoke(isolate.id!, library.id!, 'generateNewKey', []);
     final keyRef = InstanceRef.parse(keyResponse.json);
     String? key = keyRef?.valueAsString;
 
@@ -157,11 +159,28 @@ class VmServiceUtils {
     return null;
   }
 
-  Future<T?> getObject<T extends Obj?>(String dataId) async {
+  Future<Obj?> getObjectInstanceById(String dataId) async {
     final vms = await getVmService();
     final isolate = await getIsolate();
-    if (vms == null || isolate != null || isolate?.id != null) return null;
-    return await vms.getObject(isolate!.id!, dataId) as T;
+    if (vms == null || isolate == null || isolate.id == null) return null;
+    return await vms.getObject(isolate.id!, dataId);
+  }
+
+  Future<RetainingPath?> getRetainingPaths(
+      InstanceRef leakedInstance, int maxRetainingPath) async {
+    final vms = await getVmService();
+    final isolate = await getIsolate();
+    if (vms != null && isolate?.id != null && leakedInstance.id != null) {
+      final retainingPath = await vms.getRetainingPath(
+          isolate!.id!, leakedInstance.id!, maxRetainingPath);
+      return retainingPath;
+    }
+    return null;
+  }
+
+  Future<T> getObjectOfType<T extends Obj?>(String objectId) async {
+    var result = await getObjectInstanceById(objectId);
+    return result as T;
   }
 }
 
@@ -172,7 +191,7 @@ String generateNewKey() {
   return "${++_key}";
 }
 
-Map<String, dynamic> _objCache = Map();
+Map<String, dynamic> _objCache = {};
 
 /// 顶级函数，根据 key 返回指定对象
 dynamic keyToObj(String key) {

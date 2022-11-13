@@ -8,7 +8,8 @@
             "name": "fleak_detector",
             "request": "launch",
             "type": "dart",
-            "program": "lib/main.dart"
+            "program": "lib/main.dart",
+            "args": ["--no-dds"]
         },
         {
             "name": "fleak_detector (profile mode)",

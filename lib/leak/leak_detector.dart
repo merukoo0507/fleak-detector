@@ -4,22 +4,24 @@ import 'dart:ffi';
 
 import 'package:fleak_detector/leak/detect_task.dart';
 import 'package:fleak_detector/leak/vm_service_util.dart';
+import 'package:fleak_detector/model/leak_node.dart';
 
-import 'detector_event.dart';
-import 'leak_node.dart';
+import '../model/detector_event.dart';
 
-class LeakAnalyzer {
-  static LeakAnalyzer? _instance;
-  static int? maxRetainingPath;
-  factory LeakAnalyzer() {
-    _instance ??= LeakAnalyzer._();
+class LeakDetector {
+  static LeakDetector? _instance;
+  static int maxRetainingPath = 300;
+  factory LeakDetector() {
+    _instance ??= LeakDetector._();
     return _instance!;
   }
 
-  LeakAnalyzer._();
+  LeakDetector._();
 
-  Future init({int maxRetainingPath = 300}) async {
-    LeakAnalyzer.maxRetainingPath = maxRetainingPath;
+  Future init({int? maxRetainingPath}) async {
+    if (maxRetainingPath != null) {
+      LeakDetector.maxRetainingPath = maxRetainingPath;
+    }
     VmServiceUtils().getVmService();
   }
 
@@ -51,7 +53,7 @@ class LeakAnalyzer {
 
     if (_checkType(obj)) {
       String key = group;
-      Expando? expando =  = Expando('LeakChecker$key');
+      Expando? expando = Expando('LeakChecker$key');
       expando[obj] = true;
       _watchGroup[key] = expando;
     }
@@ -75,7 +77,7 @@ class LeakAnalyzer {
           onLeaked: (LeakNode? leakNode) {
             //notify listeners
             if (leakNode != null) {
-              _leakStreamController.add(leakNode);
+              addLeakNode(leakNode);
             }
           },
         ));
@@ -86,7 +88,7 @@ class LeakAnalyzer {
   }
 
   void _checkStartTask() {
-    if (_checkTaskQueue.isNotEmpty && _currentTask == null) {
+    if (_checkTaskQueue.isNotEmpty) {
       _currentTask = _checkTaskQueue.removeFirst();
       _currentTask?.start();
     }
