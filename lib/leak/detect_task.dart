@@ -44,7 +44,7 @@ class DetectorTask extends _Task {
 
   @override
   void done(result) {
-    // TODO: implement done
+    onResult?.call();
   }
 
   ///after Full GC, check whether there is a leak,
@@ -58,86 +58,113 @@ class DetectorTask extends _Task {
     //GC
     sink?.add(DetectorEvent(DetectorEventType.startGC));
     await VmServiceUtils().startGCAsync();
-    List<dynamic> weakPropertyList =
-        await _getExpandoWeakPropertyList(expando!);
+    List<dynamic> weakPropertyKeys = await getWeakKeyRefs(expando!);
     //一定要释放引用
     expando = null;
-    if (weakPropertyList.isEmpty) return null;
+    if (weakPropertyKeys.isEmpty) return null;
 
-    // await VmServiceUtils().startGCAsync();
+    await VmServiceUtils().startGCAsync();
     sink?.add(DetectorEvent(DetectorEventType.endGc));
 
     List<LeakNode> leakNodes = [];
-    sink?.add(DetectorEvent(DetectorEventType.startAnalyze));
-    try {
-      for (var weakProperty in weakPropertyList) {
-        if (weakProperty == null) continue;
-        final leakedInstance = await _getWeakPropertyKey(weakProperty.id!);
-        if (leakedInstance == null) continue;
-        final retainingPath = await VmServiceUtils()
-            .getRetainingPaths(leakedInstance, LeakDetector.maxRetainingPath);
-        if (retainingPath?.elements == null) continue;
-        LeakNode? _leakInfoHead;
-        LeakNode? pre;
-        bool isBreak = false;
-        for (var i = 0; i < retainingPath!.elements!.length; i++) {
-          RetainingObject p = retainingPath.elements![i];
+    LeakDetector().addEvent(DetectorEvent(DetectorEventType.startAnalyze));
+    for (InstanceRef instanceRef in weakPropertyKeys) {
+      if (instanceRef == null) continue;
+      //找尋引用路徑s
+      RetainingPath? retainingPath = await VmServiceUtils()
+          .getRetainingPaths(instanceRef, LeakDetector.maxRetainingPath);
+      if (retainingPath?.elements == null) continue;
+      LeakNode? _leakInfoHead;
+      LeakNode? pre;
+      bool isBreak = false;
+      for (var i = 0; i < retainingPath!.elements!.length; i++) {
+        RetainingObject p = retainingPath.elements![i];
 
-          LeakNode current = LeakNode();
-          current.parentField = p.parentField;
-          bool skip = await parsers[p.value!.runtimeType]
-                  ?.paresRefSkip(p.value!, p.parentField, current) ??
-              true;
+        LeakNode current = LeakNode();
+        current.parentField = p.parentField;
+        bool skip = await parsers[p.value!.runtimeType]
+                ?.paresRefSkip(p.value!, p.parentField, current) ??
+            true;
 
-          if (skip) {
-            isBreak = true;
-            break;
-          }
-
-          if (_leakInfoHead == null) {
-            _leakInfoHead = current;
-            pre = _leakInfoHead;
-          } else {
-            pre?.next = current;
-            pre = current;
-          }
-        }
-
-        if (isBreak) {
+        if (skip) {
+          isBreak = true;
           break;
         }
 
-        if (_leakInfoHead != null) {
-          leakNodes.add(_leakInfoHead);
-          onLeaked?.call(_leakInfoHead);
+        if (_leakInfoHead == null) {
+          _leakInfoHead = current;
+          pre = _leakInfoHead;
+        } else {
+          pre?.next = current;
+          pre = current;
         }
       }
-    } catch (e) {
-      print('Error - find retaining path: $e');
+
+      if (isBreak) {
+        break;
+      }
+
+      if (_leakInfoHead != null) {
+        leakNodes.add(_leakInfoHead);
+        onLeaked?.call(_leakInfoHead);
+      }
     }
-    sink?.add(DetectorEvent(DetectorEventType.endAnalyze));
+    LeakDetector().addEvent(DetectorEvent(DetectorEventType.endAnalyze));
     return leakNodes;
   }
 
-  ///List Item has id
-  Future<List> _getExpandoWeakPropertyList(Expando expando) async {
-    Instance? instance = await VmServiceUtils().getInstanceByObject(expando);
-    if (instance == null || instance.fields == null) return [];
-    for (int i = 0; i < instance.fields!.length; i++) {
-      BoundField field = instance.fields![i];
-      if (field.decl?.name == '_data') {
-        String _dataId = field.toJson()['value']['id'];
-        final dataObj =
-            await VmServiceUtils().getObjectInstanceById(_dataId) as Instance;
-        if (dataObj.json != null) {
-          Instance? weakListInstance = Instance.parse(dataObj.json!);
-          if (weakListInstance != null) {
-            return weakListInstance.elements ?? [];
+  Future<List<InstanceRef>> getWeakKeyRefs(Expando expando) async {
+    List<InstanceRef> instanceRefs = [];
+    //原先使用弱引用，引用物件，但被WeakProperty包裹
+    final weakPropertyRefs = await _getWeakProperty(expando);
+
+    //基本所有的 API 返回的数据都是 ObjRef，当 ObjRef 里面的信息满足不了你的时候，再调用 getObject(,,,)来获取 Obj。
+    //直接看weakPropertyRef是沒有propertyKey
+    for (var i = 0; i < weakPropertyRefs.length; i++) {
+      final weakPropertyRef = weakPropertyRefs[i];
+      final weakPropertyId = weakPropertyRef.json?['id'];
+      //根據id，找WeakProperty物件
+      Obj? weakPropertyObj =
+          await VmServiceUtils().getObjectInstanceById(weakPropertyId);
+
+      if (weakPropertyObj != null) {
+        final weakPropertyInstance = Instance.parse(weakPropertyObj.json);
+        if (weakPropertyInstance!.propertyKey != null) {
+          instanceRefs.add(weakPropertyInstance.propertyKey!);
+        }
+      }
+    }
+
+    return instanceRefs;
+  }
+
+  // 取得原先儲存在若引用的物件
+  Future<List<InstanceRef>> _getWeakProperty(Expando expando) async {
+    // 取得expando的id，再取得Expando
+    String? expandoId = await VmServiceUtils().getObjectId(expando);
+    if (expandoId == null) return [];
+    Instance expandoObj = await VmServiceUtils().getObjectOfType(expandoId);
+    List<InstanceRef> instanceRefs = [];
+    for (var i = 0; i < expandoObj.fields!.length; i++) {
+      var filed = expandoObj.fields![i];
+      //在查詢裡面的data找到dataId，根據dataId找到data，(原先key对象是放到了_data数组内，用了一个_WeakProperty来包裹)
+      if (filed.decl?.name == '_data') {
+        String _dataId = filed.toJson()['value']['id'];
+        Instance _data = await VmServiceUtils().getObjectOfType(_dataId);
+        if (_data is Instance) {
+          for (int j = 0; j < _data.elements!.length; j++) {
+            var weakProperty = _data.elements![j];
+            if (weakProperty is InstanceRef) {
+              InstanceRef weakPropertyRef = weakProperty;
+              //將data內，原先存取物件的reference取出
+              instanceRefs.add(weakPropertyRef);
+            }
           }
         }
       }
     }
-    return [];
+
+    return instanceRefs;
   }
 
   Future<InstanceRef?> _getWeakPropertyKey(String id) async {

@@ -1,71 +1,45 @@
-import 'package:fimber/fimber.dart';
 import 'package:fleak_detector/leak/leak_detector.dart';
 import 'package:flutter/widgets.dart';
 
-import 'detect_task.dart';
-
 const defaultCheckDelay = 500;
-typedef ShouldAddedRoute = bool Function(Route rout);
 
 class LeakObserver extends NavigatorObserver {
-  LeakObserver({this.shouldCheck, this.checkLeakDelay = defaultCheckDelay});
+  static LeakObserver? _instance;
+  factory LeakObserver({int delay = defaultCheckDelay}) {
+    _instance ??= LeakObserver._();
+    _instance!.checkLeakDelay = delay;
+    return _instance!;
+  }
+  LeakObserver._();
 
-  final ShouldAddedRoute? shouldCheck;
-  final int checkLeakDelay;
+  int checkLeakDelay = defaultCheckDelay;
 
-  @override
-  void didPop(Route route, Route? previousRoute) {
-    _remove(route);
-    super.didPop(route, previousRoute);
+  void add(Object object) {
+    String key = _getObjectKey(object);
+    LeakDetector().addWatchObject(object, key);
   }
 
-  @override
-  void didPush(Route route, Route? previousRoute) {
-    _add(route);
-    super.didPush(route, previousRoute);
+  void remove(Object object) {
+    String key = _getObjectKey(object);
+    LeakDetector().ensureReleaseAsync(key, delay: checkLeakDelay);
   }
 
-  @override
-  void didRemove(Route route, Route? previousRoute) {
-    _remove(route);
-    super.didRemove(route, previousRoute);
-  }
-
-  @override
-  void didReplace({Route? newRoute, Route? oldRoute}) {
-    if (newRoute != null) {
-      _add(newRoute);
+  ///generate key by [Object]
+  String _getObjectKey(Object object) {
+    final hasCode = object.hashCode.toString();
+    String? key = object.toString();
+    if (key.isEmpty) {
+      key = object.hashCode.toString();
+    } else {
+      key = '$key($hasCode)';
     }
-    if (oldRoute != null) {
-      _remove(oldRoute);
-    }
-    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-  }
-
-  Map<String, Expando> _widgetMap = {};
-  Map<String, Expando> _stateMap = {};
-
-  void _add(Route route) {
-    route.didPush().then((_) {
-      final element = _getElementByRoute(route);
-      if (element != null) {
-        LeakDetector().addWatchObject(route, _getRouteKey(route));
-      }
-    });
-  }
-
-  void _remove(Route route) {
-    final element = _getElementByRoute(route);
-    if (element != null) {
-      LeakDetector()
-          .ensureReleaseAsync(_getRouteKey(route), delay: checkLeakDelay);
-    }
+    return key;
   }
 
   ///Get the ‘Element’ of our custom page
   Element? _getElementByRoute(Route route) {
     Element? element;
-    if (route is PageRoute && (shouldCheck == null || shouldCheck!(route))) {
+    if (route is PageRoute) {
       //RepaintBoundary
       route.subtreeContext?.visitChildElements((child) {
         //Builder
@@ -79,17 +53,5 @@ class LeakObserver extends NavigatorObserver {
       });
     }
     return element;
-  }
-
-  ///generate key by [Route]
-  String _getRouteKey(Route route) {
-    final hasCode = route.hashCode.toString();
-    String? key = route.settings.name;
-    if (key == null || key.isEmpty) {
-      key = route.hashCode.toString();
-    } else {
-      key = '$key($hasCode)';
-    }
-    return key;
   }
 }

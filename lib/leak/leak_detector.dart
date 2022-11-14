@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:ffi';
 
+import 'package:fimber/fimber.dart';
 import 'package:fleak_detector/leak/detect_task.dart';
 import 'package:fleak_detector/leak/vm_service_util.dart';
+import 'package:fleak_detector/log/log_util.dart';
 import 'package:fleak_detector/model/leak_node.dart';
 
 import '../model/detector_event.dart';
@@ -18,11 +20,18 @@ class LeakDetector {
 
   LeakDetector._();
 
+  List<LeakNode> listNode = [];
+
   Future init({int? maxRetainingPath}) async {
     if (maxRetainingPath != null) {
       LeakDetector.maxRetainingPath = maxRetainingPath;
     }
-    VmServiceUtils().getVmService();
+    await VmServiceUtils().getVmService();
+
+    LeakDetector().onLeakStream.listen((LeakNode node) {
+      LogUtil.d('Node: ${node.toString()}');
+      listNode.add(node);
+    });
   }
 
   final StreamController<LeakNode> _leakStreamController =
@@ -88,7 +97,7 @@ class LeakDetector {
   }
 
   void _checkStartTask() {
-    if (_checkTaskQueue.isNotEmpty) {
+    if (_checkTaskQueue.isNotEmpty && _currentTask == null) {
       _currentTask = _checkTaskQueue.removeFirst();
       _currentTask?.start();
     }
