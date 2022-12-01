@@ -1,16 +1,18 @@
 import 'package:fleak_detector/leak/leak_observer.dart';
 import 'package:flutter/material.dart';
 
-class WatchObjectPage extends StatefulWidget {
+class ConstPage extends StatefulWidget {
+  const ConstPage({Key? key}) : super(key: key);
+
   @override
   State<StatefulWidget> createState() {
-    return _WatchObjectState();
+    return _ConstPageState();
   }
 }
 
 _TestObject? _object;
 
-class _WatchObjectState extends State<WatchObjectPage> {
+class _ConstPageState extends State<ConstPage> {
   @override
   void initState() {
     super.initState();
@@ -22,7 +24,7 @@ class _WatchObjectState extends State<WatchObjectPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('WatchObject'),
+        title: const Text('ConstObject'),
       ),
       body: Center(
         child: GestureDetector(
@@ -30,9 +32,9 @@ class _WatchObjectState extends State<WatchObjectPage> {
               Navigator.of(context).pop();
             },
             child: Container(
-              padding: EdgeInsets.all(50),
+              padding: const EdgeInsets.all(50),
               color: Colors.orange,
-              child: Text('pop'),
+              child: const Text('pop'),
             )),
       ),
       // This trailing comma makes auto-formatting nicer for build methods.

@@ -1,14 +1,16 @@
 import 'package:fleak_detector/leak/leak_observer.dart';
 import 'package:flutter/material.dart';
 
-class NormalCase extends StatefulWidget {
+class NormalPage extends StatefulWidget {
+  const NormalPage({Key? key}) : super(key: key);
+
   @override
   State<StatefulWidget> createState() {
-    return _NormalCaseState();
+    return _NormalPageState();
   }
 }
 
-class _NormalCaseState extends State<NormalCase> {
+class _NormalPageState extends State<NormalPage> {
   Count count = Count();
 
   @override
@@ -21,7 +23,7 @@ class _NormalCaseState extends State<NormalCase> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('NormalCase'),
+        title: const Text('NormalPage'),
       ),
       body: Column(
         children: [
@@ -30,7 +32,7 @@ class _NormalCaseState extends State<NormalCase> {
             style: const TextStyle(fontSize: 16),
           ),
           TextButton(
-            child: Text('Add'),
+            child: const Text('Add'),
             onPressed: () {
               setState(() {
                 count.value = count.value + 1;
@@ -42,9 +44,9 @@ class _NormalCaseState extends State<NormalCase> {
                 Navigator.of(context).pop();
               },
               child: Container(
-                padding: EdgeInsets.all(50),
+                padding: const EdgeInsets.all(50),
                 color: Colors.red,
-                child: Text('pop'),
+                child: const Text('pop'),
               )),
         ],
       ),

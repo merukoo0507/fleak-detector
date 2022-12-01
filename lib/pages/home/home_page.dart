@@ -47,10 +47,7 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Column(children: [
         PageItem(title: 'NormalCase', name: '/p1'),
-        PageItem(title: 'WatchObjectPage', name: '/p2'),
-        PageItem(title: 'P2', name: '/p3'),
-        PageItem(title: 'P3', name: '/p3'),
-        PageItem(title: 'Info', name: '/p100'),
+        PageItem(title: 'ConstPage', name: '/p2'),
       ]),
     );
   }
