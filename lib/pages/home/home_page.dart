@@ -1,3 +1,4 @@
+import 'package:fimber/fimber.dart';
 import 'package:fleak_detector/leak/leak_detector.dart';
 import 'package:fleak_detector/model/detector_event.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +18,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     LeakDetector().onEventStream.listen((event) {
-      print('$event');
+      Fimber.d('$event');
       if (event.type == DetectorEventType.startAnalyze) {
         setState(() {
           _checking = true;
@@ -46,8 +47,10 @@ class _HomePageState extends State<HomePage> {
         onPressed: () {},
       ),
       body: Column(children: [
-        PageItem(title: 'NormalCase', name: '/p1'),
-        PageItem(title: 'ConstPage', name: '/p2'),
+        PageItem(title: 'Normal', name: '/p1'),
+        // PageItem(title: 'Const', name: '/p2'),
+        PageItem(title: 'Global Access', name: '/p3'),
+        PageItem(title: 'Info', name: '/pInfo'),
       ]),
     );
   }

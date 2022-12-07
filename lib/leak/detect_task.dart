@@ -57,19 +57,23 @@ class DetectorTask extends _Task {
     //run GC,ensure Object should release
     //GC
     sink?.add(DetectorEvent(DetectorEventType.startGC));
-    await VmServiceUtils().startGCAsync();
+    var gcResult = await VmServiceUtils().startGCAsync();
     List<dynamic> weakPropertyKeys = await getWeakKeyRefs(expando!);
+
     //一定要释放引用
     expando = null;
     if (weakPropertyKeys.isEmpty) return null;
-
-    await VmServiceUtils().startGCAsync();
-    sink?.add(DetectorEvent(DetectorEventType.endGc));
+    sink?.add(DetectorEvent(DetectorEventType.startGC));
+    gcResult = await VmServiceUtils().startGCAsync();
 
     List<LeakNode> leakNodes = [];
     LeakDetector().addEvent(DetectorEvent(DetectorEventType.startAnalyze));
-    for (InstanceRef instanceRef in weakPropertyKeys) {
-      if (instanceRef == null) continue;
+    for (InstanceRef? instanceRef in weakPropertyKeys) {
+      if (instanceRef == null || instanceRef.id == 'objects/null') {
+        Fimber.d('checkLeak instanceRef = $instanceRef');
+        break;
+      }
+
       //找尋引用路徑s
       RetainingPath? retainingPath = await VmServiceUtils()
           .getRetainingPaths(instanceRef, LeakDetector.maxRetainingPath);
@@ -125,7 +129,7 @@ class DetectorTask extends _Task {
       final weakPropertyId = weakPropertyRef.json?['id'];
       //根據id，找WeakProperty物件
       Obj? weakPropertyObj =
-          await VmServiceUtils().getObjectInstanceById(weakPropertyId);
+          await VmServiceUtils().getObjectOfType(weakPropertyId);
 
       if (weakPropertyObj != null) {
         final weakPropertyInstance = Instance.parse(weakPropertyObj.json);

@@ -34,7 +34,7 @@ class LeakNode {
       parent = parentField;
     }
     String empty = '';
-    return '[${_formatAlign('${type == NodeType.FIELD ? '${codeInfo?.uri}; ${isRoot ? ' GC Root' : ""} Field -> $name' : 'name : $name'}${codeInfo == null ? '' : '  >>>  ${codeInfo?.toString()}  <<<'}', type == NodeType.FIELD ? 200 : 50)} ] ${next == null ? ' ' : '${_formatAlign(parent == null ? empty : ' field -> $parent', 30)}    ↓    '
+    return '[${_formatAlign('${type == NodeType.FIELD ? '${codeInfo?.uri}; ${isRoot ? ' GC Root' : ""} Field -> $name' : 'name : $name'}${codeInfo == null ? '' : '  >>>  ${codeInfo?.toString()}  <<<'}', type == NodeType.FIELD ? 200 : 30)} ] ${next == null ? ' ' : '${_formatAlign(parent == null ? empty : ' field -> $parent', 10)}    ↓    '
         '\n${next?.toString()}'}';
   }
 }

@@ -14,7 +14,10 @@ class LeakDetector {
   static LeakDetector? _instance;
   static int maxRetainingPath = 300;
   factory LeakDetector() {
-    _instance ??= LeakDetector._();
+    if (_instance == null) {
+      _instance = LeakDetector._();
+      _instance!.init();
+    }
     return _instance!;
   }
 
@@ -22,10 +25,8 @@ class LeakDetector {
 
   List<LeakNode> listNode = [];
 
-  Future init({int? maxRetainingPath}) async {
-    if (maxRetainingPath != null) {
-      LeakDetector.maxRetainingPath = maxRetainingPath;
-    }
+  Future init({int maxRetainingPath = 300}) async {
+    LeakDetector.maxRetainingPath = maxRetainingPath;
     await VmServiceUtils().getVmService();
 
     LeakDetector().onLeakStream.listen((LeakNode node) {
@@ -56,13 +57,13 @@ class LeakDetector {
     _eventStreamController.sink.add(event);
   }
 
-  addWatchObject(Object obj, String group) {
+  addWatchObject(Object obj, String objKey) {
     _eventStreamController
-        .add(DetectorEvent(DetectorEventType.addObject, data: group));
+        .add(DetectorEvent(DetectorEventType.addObject, data: objKey));
 
     if (_checkType(obj)) {
-      String key = group;
-      Expando? expando = Expando('LeakChecker$key');
+      String key = objKey;
+      Expando? expando = Expando('LeakChecker/$key');
       expando[obj] = true;
       _watchGroup[key] = expando;
     }
@@ -73,7 +74,7 @@ class LeakDetector {
     _watchGroup.remove(key);
     if (expando != null) {
       //延時檢測，有些state會在頁面退出之後延遲釋放，這並不表示就一定是內存洩漏。
-      Timer(Duration(milliseconds: delay), () async {
+      Timer(Duration(seconds: delay), () async {
         _checkTaskQueue.add(DetectorTask(
           expando!,
           sink: _eventStreamController.sink,
@@ -99,6 +100,8 @@ class LeakDetector {
   void _checkStartTask() {
     if (_checkTaskQueue.isNotEmpty && _currentTask == null) {
       _currentTask = _checkTaskQueue.removeFirst();
+
+      Fimber.d("開始檢測 ${_currentTask?.expando}");
       _currentTask?.start();
     }
   }

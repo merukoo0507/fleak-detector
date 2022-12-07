@@ -11,8 +11,6 @@ const String _findLibrary = 'package:fleak_detector/leak/vm_service_util.dart';
 
 class VmServiceUtils {
   static VmServiceUtils? _instance;
-
-  bool _enable = false;
   VmService? _vmService;
   Uri? _observatoryUri;
   Isolate? _isolate;
@@ -23,9 +21,7 @@ class VmServiceUtils {
     return _instance!;
   }
 
-  VmServiceUtils._() {
-    _enable = true;
-  }
+  VmServiceUtils._();
 
   Future<VmService?> getVmService() async {
     if (_vmService == null) {
@@ -45,10 +41,8 @@ class VmServiceUtils {
   }
 
   Future<Uri?> getObservatoryUri() async {
-    if (_enable) {
-      ServiceProtocolInfo serviceProtocolInfo = await Service.getInfo();
-      _observatoryUri = serviceProtocolInfo.serverUri;
-    }
+    ServiceProtocolInfo serviceProtocolInfo = await Service.getInfo();
+    _observatoryUri = serviceProtocolInfo.serverUri;
     return _observatoryUri;
   }
 
@@ -78,12 +72,13 @@ class VmServiceUtils {
     return _vm;
   }
 
-  Future startGCAsync() async {
+  Future<AllocationProfile?> startGCAsync() async {
     final vms = await getVmService();
     final isolate = await getIsolate();
-    if (isolate != null && isolate.id != null) {
-      await _vmService!.getAllocationProfile(_isolate!.id!, gc: true);
+    if (vms != null && isolate != null && isolate.id != null) {
+      return await vms.getAllocationProfile(_isolate!.id!, gc: true);
     }
+    return null;
   }
 
   ///通过Object获取Instance
@@ -159,13 +154,6 @@ class VmServiceUtils {
     return null;
   }
 
-  Future<Obj?> getObjectInstanceById(String dataId) async {
-    final vms = await getVmService();
-    final isolate = await getIsolate();
-    if (vms == null || isolate == null || isolate.id == null) return null;
-    return await vms.getObject(isolate.id!, dataId);
-  }
-
   Future<RetainingPath?> getRetainingPaths(
       InstanceRef leakedInstance, int maxRetainingPath) async {
     final vms = await getVmService();
@@ -181,6 +169,13 @@ class VmServiceUtils {
   Future<T> getObjectOfType<T extends Obj?>(String objectId) async {
     var result = await getObjectInstanceById(objectId);
     return result as T;
+  }
+
+  Future<Obj?> getObjectInstanceById(String objectId) async {
+    final vms = await getVmService();
+    final isolate = await getIsolate();
+    if (vms == null || isolate == null || isolate.id == null) return null;
+    return await vms.getObject(isolate.id!, objectId);
   }
 }
 

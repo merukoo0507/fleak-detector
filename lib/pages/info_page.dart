@@ -34,28 +34,29 @@ class _InfoPageState extends State<InfoPage> {
                 });
               },
               child: const Text('Clear')),
-          SizedBox(
-            height: 500,
+          Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.all(20),
               itemBuilder: ((context, index) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    InfoItem('gc root field - > ${nodes[index].name}',
-                        InfoType.FIELD),
-                    InfoItem(
-                        'code - > ${nodes[index].codeInfo?.toString() ?? ''}',
-                        InfoType.CODE),
-                    InfoItem(
-                        'uri - > ${nodes[index].codeInfo?.uri}', InfoType.URI),
+                    Text(nodes[index].toString()),
+                    // children: [
+                    //   InfoItem('gc root field - > ${nodes[index].name}',
+                    //       InfoType.FIELD),
+                    //   InfoItem(
+                    //       'code - > ${nodes[index].codeInfo?.toString() ?? ''}',
+                    //       InfoType.CODE),
+                    //   InfoItem(
+                    //       'uri - > ${nodes[index].codeInfo?.uri}', InfoType.URI),
                   ],
                 );
               }),
               itemCount: nodes.length,
               separatorBuilder: (context, index) => Container(
                 color: Colors.grey,
-                height: 1,
+                height: 2,
                 width: double.infinity,
               ),
             ),
