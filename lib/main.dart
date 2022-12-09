@@ -3,9 +3,10 @@ import 'package:fleak_detector/leak/leak_observer.dart';
 import 'package:fleak_detector/pages/home/home_page.dart';
 import 'package:fleak_detector/pages/info_page.dart';
 import 'package:fleak_detector/pages/normal_page.dart';
+import 'package:fleak_detector/pages/performace_page.dart';
 import 'package:flutter/material.dart';
 import 'pages/const_page.dart';
-import 'pages/global_page.dart';
+import 'pages/leak_page.dart';
 
 void main() {
   Fimber.plantTree(DebugTree());
@@ -34,8 +35,8 @@ class _MyAppState extends State<MyApp> {
       routes: {
         '/': (context) => const HomePage(title: 'fleak detector'),
         '/p1': (context) => NormalPage(),
-        '/p2': (context) => ConstPage(),
-        '/p3': (context) => GlobalPage(),
+        '/p2': (context) => LeakPage(),
+        '/p3': (context) => PerformancePage(),
         '/pInfo': (context) => InfoPage(),
       },
       initialRoute: '/',

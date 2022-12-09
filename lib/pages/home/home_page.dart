@@ -48,8 +48,8 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Column(children: [
         PageItem(title: 'Normal', name: '/p1'),
-        // PageItem(title: 'Const', name: '/p2'),
-        PageItem(title: 'Global Access', name: '/p3'),
+        PageItem(title: 'Leak', name: '/p2'),
+        PageItem(title: 'Performance', name: '/p3'),
         PageItem(title: 'Info', name: '/pInfo'),
       ]),
     );

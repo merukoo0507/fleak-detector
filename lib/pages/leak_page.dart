@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 final List _states = [];
@@ -13,15 +11,15 @@ final List _states = [];
 //   SingleTon._();
 // }
 
-class GlobalPage extends StatefulWidget {
+class LeakPage extends StatefulWidget {
   @override
   State<StatefulWidget> createState() {
     // SingleTon()._leakWidgets.add(this);
-    return _GlobalPage();
+    return _LeakPageState();
   }
 }
 
-class _GlobalPage extends State<GlobalPage> {
+class _LeakPageState extends State<LeakPage> {
   @override
   void initState() {
     super.initState();
@@ -32,7 +30,7 @@ class _GlobalPage extends State<GlobalPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Global Access'),
+        title: Text('Leak'),
       ),
       body: Center(
         child: GestureDetector(
@@ -45,7 +43,6 @@ class _GlobalPage extends State<GlobalPage> {
               child: Text('pop'),
             )),
       ),
-      // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
